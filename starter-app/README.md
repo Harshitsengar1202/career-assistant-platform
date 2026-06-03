@@ -38,6 +38,18 @@ uvicorn app.main:app --reload --port 8000
 - `PATCH /applications/{application_id}/status`: move an application between pipeline stages.
 - `GET /exports/applications.csv`: download application pipeline data as CSV.
 
+## Production URLs
+
+- Backend: `https://career-assistant-platform-production.up.railway.app`
+- Frontend: `https://career-assistant-platform-kappa.vercel.app`
+
+Railway variables to keep configured:
+
+```text
+DATABASE_URL=postgresql://...
+FRONTEND_ORIGINS=https://career-assistant-platform-kappa.vercel.app
+```
+
 Example job creation:
 
 ```bash
