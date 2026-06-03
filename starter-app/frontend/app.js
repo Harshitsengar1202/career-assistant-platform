@@ -103,4 +103,69 @@ async function analyzeResume(save = false) {
 document.querySelector("#analyze-resume").addEventListener("click", () => analyzeResume(false));
 document.querySelector("#save-resume").addEventListener("click", () => analyzeResume(true));
 
+function kitPayload() {
+  const company = document.querySelector("#kit-company").value.trim();
+  const role = document.querySelector("#kit-role").value.trim();
+  const resumeSummary = document.querySelector("#resume-text").value.trim();
+  const jobDescription = document.querySelector("#job-description").value.trim();
+  const tone = document.querySelector("#kit-tone").value;
+
+  if (company.length < 2 || role.length < 2) {
+    alert("Add a company and role first.");
+    return null;
+  }
+
+  if (resumeSummary.length < 30 || jobDescription.length < 30) {
+    alert("Paste resume text and job description before generating the kit.");
+    return null;
+  }
+
+  return {
+    company,
+    role,
+    resume_summary: resumeSummary,
+    job_description: jobDescription,
+    tone
+  };
+}
+
+async function generateKit(endpoint, render) {
+  const payload = kitPayload();
+  if (!payload) return;
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    alert("Generation failed. Check the backend logs.");
+    return;
+  }
+
+  render(await response.json());
+}
+
+document.querySelector("#generate-cover").addEventListener("click", () => {
+  generateKit("/ai/cover-letter", (result) => {
+    document.querySelector("#kit-output").textContent = result.cover_letter;
+  });
+});
+
+document.querySelector("#generate-interview").addEventListener("click", () => {
+  generateKit("/ai/interview-prep", (result) => {
+    const questions = result.questions.map((question, index) => `${index + 1}. ${question}`).join("\n");
+    const tips = result.answer_tips.map((tip) => `- ${tip}`).join("\n");
+    document.querySelector("#kit-output").textContent = `Interview Questions\n\n${questions}\n\nAnswer Tips\n\n${tips}`;
+  });
+});
+
+document.querySelector("#generate-outreach").addEventListener("click", () => {
+  generateKit("/ai/outreach", (result) => {
+    document.querySelector("#kit-output").textContent =
+      `LinkedIn Note\n\n${result.linkedin_note}\n\nCold Email\n\n${result.cold_email}\n\nFollow Up\n\n${result.follow_up}`;
+  });
+});
+
 loadJobs().then(renderJobs);

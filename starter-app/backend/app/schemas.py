@@ -70,6 +70,29 @@ class ResumeRecord(BaseModel):
     created_at: str
 
 
+class ApplicationKitRequest(BaseModel):
+    company: str = Field(min_length=2)
+    role: str = Field(min_length=2)
+    resume_summary: str = Field(min_length=30)
+    job_description: str = Field(min_length=30)
+    tone: Literal["professional", "friendly", "confident", "executive"] = "professional"
+
+
+class CoverLetterResponse(BaseModel):
+    cover_letter: str
+
+
+class InterviewPrepResponse(BaseModel):
+    questions: list[str]
+    answer_tips: list[str]
+
+
+class OutreachResponse(BaseModel):
+    linkedin_note: str
+    cold_email: str
+    follow_up: str
+
+
 class AutoApplyRequest(BaseModel):
     daily_limit: int = Field(default=10, ge=1, le=100)
     approval_mode: bool = True

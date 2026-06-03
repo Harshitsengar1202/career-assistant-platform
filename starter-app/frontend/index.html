@@ -56,6 +56,37 @@
         </div>
       </section>
 
+      <section class="panel kit-panel">
+        <div class="panel-head">
+          <h2>Application kit</h2>
+          <div class="button-row">
+            <button id="generate-cover">Cover letter</button>
+            <button id="generate-interview">Interview prep</button>
+            <button id="generate-outreach">Outreach</button>
+          </div>
+        </div>
+        <div class="kit-grid">
+          <label>
+            <span>Company</span>
+            <input id="kit-company" placeholder="Company name" />
+          </label>
+          <label>
+            <span>Role</span>
+            <input id="kit-role" placeholder="Target role" />
+          </label>
+          <label>
+            <span>Tone</span>
+            <select id="kit-tone">
+              <option value="professional">Professional</option>
+              <option value="friendly">Friendly</option>
+              <option value="confident">Confident</option>
+              <option value="executive">Executive</option>
+            </select>
+          </label>
+        </div>
+        <pre id="kit-output">Generate a cover letter, interview prep pack, or outreach sequence.</pre>
+      </section>
+
       <section class="layout">
         <div class="panel">
           <div class="panel-head">

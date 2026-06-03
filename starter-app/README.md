@@ -36,6 +36,9 @@ uvicorn app.main:app --reload --port 8000
 - `POST /resumes/analyze`: score pasted resume text against a job description.
 - `POST /resumes`: save a resume score into Supabase.
 - `GET /resumes`: list saved resume scores.
+- `POST /ai/cover-letter`: generate a tailored cover letter.
+- `POST /ai/interview-prep`: generate interview questions and answer tips.
+- `POST /ai/outreach`: generate LinkedIn, cold email, and follow-up messages.
 - `GET /applications`: list the demo user's application pipeline.
 - `POST /applications`: save a job into the pipeline.
 - `PATCH /applications/{application_id}/status`: move an application between pipeline stages.
@@ -67,4 +70,12 @@ Example resume analysis:
 curl -X POST "$API_BASE/resumes/analyze" \
   -H "Content-Type: application/json" \
   -d '{"resume_text":"Experience: Built Python APIs with PostgreSQL, Docker, testing, and analytics dashboards. Skills: Python, SQL, FastAPI, React, cloud automation, collaboration, leadership. Projects: Reduced manual reporting by 40%. Education: Computer Science.","job_description":"We need a backend engineer with Python, FastAPI, PostgreSQL, Docker, API design, testing, analytics, and cloud experience."}'
+```
+
+Example application kit:
+
+```bash
+curl -X POST "$API_BASE/ai/cover-letter" \
+  -H "Content-Type: application/json" \
+  -d '{"company":"Acme AI","role":"Backend Engineer","resume_summary":"Built Python APIs with PostgreSQL, Docker, testing, analytics dashboards, and cloud automation. Reduced manual reporting by 40%.","job_description":"We need a backend engineer with Python, FastAPI, PostgreSQL, Docker, API design, testing, analytics, and cloud experience.","tone":"professional"}'
 ```

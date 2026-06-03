@@ -15,9 +15,13 @@ from .schemas import (
     Application,
     ApplicationCreate,
     ApplicationStatusUpdate,
+    ApplicationKitRequest,
     AutoApplyRequest,
+    CoverLetterResponse,
+    InterviewPrepResponse,
     Job,
     JobCreate,
+    OutreachResponse,
     ResumeAnalyzeRequest,
     ResumeAnalyzeResponse,
     ResumeCreate,
@@ -147,6 +151,89 @@ def analyze_resume_text(resume_text: str, job_description: str = "") -> ResumeAn
         suggestions=suggestions,
         word_count=word_count,
     )
+
+
+def first_sentence(text: str, fallback: str) -> str:
+    sentence = re.split(r"(?<=[.!?])\s+", text.strip())[0]
+    return sentence[:220] if sentence else fallback
+
+
+def top_strengths(resume_summary: str, job_description: str) -> list[str]:
+    analysis = analyze_resume_text(resume_summary, job_description)
+    strengths = analysis.matched_keywords[:5]
+    return strengths or ["role-relevant experience", "structured problem solving", "clear communication"]
+
+
+def tone_phrase(tone: str) -> str:
+    return {
+        "professional": "I would welcome the opportunity to discuss how my background can support your team.",
+        "friendly": "I would be excited to learn more and see where I can help the team move faster.",
+        "confident": "I am confident I can contribute quickly and raise the quality of execution for this role.",
+        "executive": "I would appreciate the opportunity to discuss the strategic outcomes this role is expected to deliver.",
+    }.get(tone, "I would welcome the opportunity to discuss the role.")
+
+
+@app.post("/ai/cover-letter", response_model=CoverLetterResponse)
+def generate_cover_letter(request: ApplicationKitRequest):
+    strengths = ", ".join(top_strengths(request.resume_summary, request.job_description)[:4])
+    role_signal = first_sentence(request.job_description, f"The {request.role} role appears focused on measurable execution and cross-functional impact.")
+    resume_signal = first_sentence(request.resume_summary, "My background includes relevant execution across product, engineering, and delivery work.")
+    cover_letter = (
+        f"Dear {request.company} hiring team,\n\n"
+        f"I am writing to express my interest in the {request.role} role at {request.company}. "
+        f"{role_signal}\n\n"
+        f"{resume_signal} My strongest alignment for this position is in {strengths}. "
+        "I focus on turning ambiguous requirements into reliable systems, documenting decisions clearly, "
+        "and delivering work that can be maintained after launch.\n\n"
+        f"{tone_phrase(request.tone)}\n\n"
+        "Sincerely,\n"
+        "Your Name"
+    )
+    return CoverLetterResponse(cover_letter=cover_letter)
+
+
+@app.post("/ai/interview-prep", response_model=InterviewPrepResponse)
+def generate_interview_prep(request: ApplicationKitRequest):
+    strengths = top_strengths(request.resume_summary, request.job_description)
+    questions = [
+        f"Walk me through your most relevant experience for the {request.role} role at {request.company}.",
+        f"How have you used {strengths[0]} in a production or real-world project?",
+        "Describe a time you improved a process, system, or workflow with measurable impact.",
+        "How do you prioritize quality, speed, and maintainability when deadlines are tight?",
+        "What would you do in your first 30 days if selected for this role?",
+        "Tell me about a time you handled ambiguity or incomplete requirements.",
+        "Which part of this job description feels strongest for you, and where would you ramp up?",
+        "Why are you interested in this company and this role specifically?",
+    ]
+    answer_tips = [
+        "Use STAR format: situation, task, action, result.",
+        "Mention metrics where possible: percentage, time saved, users, revenue, reliability, or scale.",
+        f"Anchor answers around these strengths: {', '.join(strengths[:5])}.",
+        "Close each answer with what you learned or how you would apply it in the new role.",
+    ]
+    return InterviewPrepResponse(questions=questions, answer_tips=answer_tips)
+
+
+@app.post("/ai/outreach", response_model=OutreachResponse)
+def generate_outreach(request: ApplicationKitRequest):
+    strengths = ", ".join(top_strengths(request.resume_summary, request.job_description)[:3])
+    linkedin_note = (
+        f"Hi, I noticed the {request.role} opening at {request.company}. "
+        f"My background aligns with {strengths}, and I would appreciate a quick pointer on the best way to be considered."
+    )
+    cold_email = (
+        f"Subject: Interest in {request.role} at {request.company}\n\n"
+        "Hello,\n\n"
+        f"I am reaching out about the {request.role} role at {request.company}. "
+        f"My experience aligns with {strengths}, and I am especially interested in the problems described in the role. "
+        "I would be grateful if you could point me to the right hiring contact or share any advice on the application process.\n\n"
+        "Best,\nYour Name"
+    )
+    follow_up = (
+        f"Hello, I wanted to follow up on my interest in the {request.role} role at {request.company}. "
+        "I remain very interested and would be glad to share more context on my fit if useful."
+    )
+    return OutreachResponse(linkedin_note=linkedin_note, cold_email=cold_email, follow_up=follow_up)
 
 
 def ensure_demo_user_id() -> str:
