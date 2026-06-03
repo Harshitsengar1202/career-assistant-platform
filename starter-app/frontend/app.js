@@ -4,6 +4,10 @@ const jobs = [
   { company: "TalentOS", title: "Full Stack Developer", location: "Hybrid", score: 81, source: "Indeed" }
 ];
 
+const API_BASE = "https://career-assistant-platform-production.up.railway.app";
+
+const response = await fetch(`${API_BASE}/jobs/recommended`);
+const jobs = await response.json();
 const root = document.querySelector("#jobs");
 root.innerHTML = jobs.map(job => `
   <article class="job">
