@@ -23,6 +23,12 @@ class JobCreate(BaseModel):
     source_url: str = "https://example.com/job"
 
 
+class JobRefreshRequest(BaseModel):
+    query: str = "software engineer"
+    location: str = "remote"
+    limit: int = Field(default=25, ge=1, le=100)
+
+
 class Application(BaseModel):
     id: str
     company: str
@@ -68,6 +74,22 @@ class ResumeRecord(BaseModel):
     title: str
     ats_score: int | None = None
     created_at: str
+
+
+class ResumeUploadResponse(BaseModel):
+    resume: ResumeRecord
+    analysis: ResumeAnalyzeResponse
+    extracted_text: str
+    extracted_text_preview: str
+
+
+class TailoredResumeResponse(BaseModel):
+    ats_score: int = Field(ge=0, le=100)
+    tailored_summary: str
+    optimized_bullets: list[str]
+    missing_keywords: list[str]
+    suggestions: list[str]
+    provider: str
 
 
 class ApplicationKitRequest(BaseModel):

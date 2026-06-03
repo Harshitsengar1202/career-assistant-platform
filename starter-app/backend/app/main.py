@@ -4,9 +4,10 @@ import io
 import json
 import os
 import re
+from io import BytesIO
 from collections import Counter
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -19,6 +20,7 @@ from .ai_service import (
     resume_agent,
 )
 from .db import check_database, execute_one, fetch_all, fetch_one
+from .job_sources import fetch_live_jobs
 from .schemas import (
     Application,
     ApplicationCreate,
@@ -30,11 +32,14 @@ from .schemas import (
     InterviewPrepResponse,
     Job,
     JobCreate,
+    JobRefreshRequest,
     OutreachResponse,
     ResumeAnalyzeRequest,
     ResumeAnalyzeResponse,
     ResumeCreate,
     ResumeRecord,
+    ResumeUploadResponse,
+    TailoredResumeResponse,
 )
 
 app = FastAPI(title="AI Career Assistant API", version="0.1.0")
@@ -114,6 +119,66 @@ def normalized_hash(company: str, title: str, location: str, source_url: str) ->
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def save_job_payload(job: dict) -> Job:
+    source_url = str(job.get("source_url") or "https://example.com/job")
+    row = execute_one(
+        """
+        INSERT INTO jobs (
+          source_platform,
+          source_url,
+          company,
+          title,
+          location,
+          salary_min,
+          salary_max,
+          description,
+          normalized_hash
+        )
+        VALUES (
+          :source_platform,
+          :source_url,
+          :company,
+          :title,
+          :location,
+          :salary_min,
+          :salary_max,
+          :description,
+          :normalized_hash
+        )
+        ON CONFLICT (normalized_hash)
+        DO UPDATE SET
+          discovered_at = now(),
+          description = EXCLUDED.description
+        RETURNING id::text AS id, company, title, location, salary_min, salary_max, source_platform AS source
+        """,
+        {
+            "source_platform": job.get("source") or "Manual",
+            "source_url": source_url,
+            "company": job.get("company") or "Unknown Company",
+            "title": job.get("title") or "Untitled Role",
+            "location": job.get("location") or "Remote",
+            "salary_min": job.get("salary_min"),
+            "salary_max": job.get("salary_max"),
+            "description": job.get("description") or "",
+            "normalized_hash": normalized_hash(
+                job.get("company") or "Unknown Company",
+                job.get("title") or "Untitled Role",
+                job.get("location") or "Remote",
+                source_url,
+            ),
+        },
+    )
+    return Job(
+        id=row["id"],
+        company=row["company"],
+        title=row["title"],
+        location=row["location"],
+        match_score=85,
+        salary=format_salary(row["salary_min"], row["salary_max"]),
+        source=row["source"],
+    )
+
+
 def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z][a-zA-Z0-9+#.-]{1,}", text.lower())
 
@@ -169,6 +234,36 @@ def analyze_resume_text(resume_text: str, job_description: str = "") -> ResumeAn
         suggestions=suggestions,
         word_count=word_count,
     )
+
+
+def extract_pdf_text(pdf_bytes: bytes) -> str:
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    pages = [page.extract_text() or "" for page in reader.pages]
+    text = "\n".join(pages).strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Could not extract text from this PDF")
+    return text
+
+
+def save_resume_record(user_id: str, title: str, resume_text: str, analysis: ResumeAnalyzeResponse) -> ResumeRecord:
+    row = execute_one(
+        """
+        INSERT INTO resumes (user_id, title, storage_url, parsed_text, parsed_json, ats_score, is_active)
+        VALUES (:user_id, :title, :storage_url, :parsed_text, CAST(:parsed_json AS jsonb), :ats_score, true)
+        RETURNING id::text AS id, title, ats_score::int AS ats_score, created_at::text AS created_at
+        """,
+        {
+            "user_id": user_id,
+            "title": title,
+            "storage_url": f"inline://{hashlib.sha256(resume_text.encode('utf-8')).hexdigest()}",
+            "parsed_text": resume_text,
+            "parsed_json": json.dumps(analysis.model_dump()),
+            "ats_score": analysis.ats_score,
+        },
+    )
+    return ResumeRecord(**row)
 
 
 def first_sentence(text: str, fallback: str) -> str:
@@ -321,22 +416,40 @@ def analyze_resume(request: ResumeAnalyzeRequest):
 def create_resume(resume: ResumeCreate):
     user_id = ensure_demo_user_id()
     analysis = analyze_resume_text(resume.resume_text, resume.job_description)
-    row = execute_one(
-        """
-        INSERT INTO resumes (user_id, title, storage_url, parsed_text, parsed_json, ats_score, is_active)
-        VALUES (:user_id, :title, :storage_url, :parsed_text, CAST(:parsed_json AS jsonb), :ats_score, true)
-        RETURNING id::text AS id, title, ats_score::int AS ats_score, created_at::text AS created_at
-        """,
-        {
-            "user_id": user_id,
-            "title": resume.title,
-            "storage_url": f"inline://{hashlib.sha256(resume.resume_text.encode('utf-8')).hexdigest()}",
-            "parsed_text": resume.resume_text,
-            "parsed_json": json.dumps(analysis.model_dump()),
-            "ats_score": analysis.ats_score,
-        },
+    return save_resume_record(user_id, resume.title, resume.resume_text, analysis)
+
+
+@app.post("/resumes/upload-pdf", response_model=ResumeUploadResponse)
+async def upload_resume_pdf(
+    file: UploadFile = File(...),
+    job_description: str = Form(""),
+    title: str = Form("Uploaded Resume"),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF resumes are supported")
+    resume_text = extract_pdf_text(await file.read())
+    analysis = analyze_resume_text(resume_text, job_description)
+    resume = save_resume_record(ensure_demo_user_id(), title, resume_text, analysis)
+    return ResumeUploadResponse(
+        resume=resume,
+        analysis=analysis,
+        extracted_text=resume_text,
+        extracted_text_preview=resume_text[:1000],
     )
-    return ResumeRecord(**row)
+
+
+@app.post("/resumes/tailor", response_model=TailoredResumeResponse)
+def tailor_resume(request: ResumeAnalyzeRequest):
+    analysis = analyze_resume_text(request.resume_text, request.job_description)
+    agent_result = resume_agent(request.resume_text, request.job_description, analysis)
+    return TailoredResumeResponse(
+        ats_score=agent_result.ats_score,
+        tailored_summary=agent_result.tailored_summary,
+        optimized_bullets=agent_result.optimized_bullets,
+        missing_keywords=agent_result.missing_keywords,
+        suggestions=agent_result.suggestions,
+        provider=agent_result.provider,
+    )
 
 
 @app.get("/resumes", response_model=list[ResumeRecord])
@@ -396,55 +509,32 @@ def recommended_jobs():
 
 @app.post("/jobs", response_model=Job)
 def create_job(job: JobCreate):
-    source_url = str(job.source_url)
-    row = execute_one(
-        """
-        INSERT INTO jobs (
-          source_platform,
-          source_url,
-          company,
-          title,
-          location,
-          salary_min,
-          salary_max,
-          description,
-          normalized_hash
+    return save_job_payload(job.model_dump())
+
+
+@app.post("/jobs/refresh", response_model=list[Job])
+async def refresh_jobs(request: JobRefreshRequest):
+    live_jobs = await fetch_live_jobs(request.query, request.limit)
+    if not live_jobs:
+        raise HTTPException(status_code=502, detail="No live jobs returned from public job sources")
+    return [save_job_payload(job) for job in live_jobs]
+
+
+@app.get("/jobs/live", response_model=list[Job])
+async def live_jobs(query: str = "software engineer", limit: int = 25):
+    live_jobs_result = await fetch_live_jobs(query, limit)
+    return [
+        Job(
+            id=f"live_{index}",
+            company=job["company"],
+            title=job["title"],
+            location=job["location"],
+            match_score=85,
+            salary=None,
+            source=job["source"],
         )
-        VALUES (
-          :source_platform,
-          :source_url,
-          :company,
-          :title,
-          :location,
-          :salary_min,
-          :salary_max,
-          :description,
-          :normalized_hash
-        )
-        ON CONFLICT (normalized_hash) DO UPDATE SET discovered_at = now()
-        RETURNING id::text AS id, company, title, location, salary_min, salary_max, source_platform AS source
-        """,
-        {
-            "source_platform": job.source,
-            "source_url": source_url,
-            "company": job.company,
-            "title": job.title,
-            "location": job.location,
-            "salary_min": job.salary_min,
-            "salary_max": job.salary_max,
-            "description": job.description,
-            "normalized_hash": normalized_hash(job.company, job.title, job.location, source_url),
-        },
-    )
-    return Job(
-        id=row["id"],
-        company=row["company"],
-        title=row["title"],
-        location=row["location"],
-        match_score=85,
-        salary=format_salary(row["salary_min"], row["salary_max"]),
-        source=row["source"],
-    )
+        for index, job in enumerate(live_jobs_result)
+    ]
 
 
 @app.get("/applications", response_model=list[Application])

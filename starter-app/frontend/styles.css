@@ -46,6 +46,8 @@ nav button.active, button.primary {
   border-color: var(--blue);
 }
 main { padding: 28px; min-width: 0; }
+.view { display: none; }
+.view.active { display: block; }
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -78,6 +80,13 @@ p { color: var(--muted); }
   gap: 14px;
 }
 .resume-panel, .kit-panel { margin-bottom: 14px; }
+.upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
 .resume-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 260px;
@@ -122,6 +131,10 @@ input, select {
   color: var(--ink);
   background: #fff;
   font: inherit;
+}
+input[type="file"] {
+  border: 1px dashed var(--line);
+  background: #fafbfc;
 }
 pre {
   margin: 0;
@@ -185,16 +198,28 @@ pre {
         }
 .kanban {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
-.kanban div {
+.stage {
   min-height: 170px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   background: #fafbfc;
 }
+.pipeline-card, .mini-item {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+.pipeline-card p, .mini-item span { margin: 0; color: var(--muted); }
+.pipeline-card select { margin-top: 4px; }
+.mini-list { display: grid; gap: 8px; }
 .agent {
   margin-top: 14px;
   display: flex;
@@ -207,6 +232,6 @@ pre {
   .sidebar { position: static; border-right: 0; border-bottom: 1px solid var(--line); }
   nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   nav button { text-align: center; }
-  .metrics, .layout, .resume-grid, .kit-grid { grid-template-columns: 1fr; }
+  .metrics, .layout, .resume-grid, .kit-grid, .kanban { grid-template-columns: 1fr; }
   .topbar, .agent { align-items: stretch; flex-direction: column; }
 }

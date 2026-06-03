@@ -10,117 +10,163 @@
     <aside class="sidebar">
       <div class="brand">CareerOS</div>
       <nav>
-        <button class="active">Dashboard</button>
-        <button>Resume</button>
-        <button>Jobs</button>
-        <button>Pipeline</button>
-        <button>Agents</button>
+        <button class="active" data-view="dashboard">Dashboard</button>
+        <button data-view="resume">Resume</button>
+        <button data-view="jobs">Jobs</button>
+        <button data-view="pipeline">Pipeline</button>
+        <button data-view="agents">Agents</button>
       </nav>
     </aside>
+
     <main>
       <header class="topbar">
         <div>
-          <h1>Autonomous career assistant</h1>
-          <p>Ranked jobs, resume intelligence, and controlled application automation.</p>
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle">Ranked jobs, resume intelligence, and controlled AI application workflows.</p>
         </div>
-        <button class="primary">Run scan</button>
+        <button class="primary" id="refresh-all">Refresh</button>
       </header>
 
-      <section class="metrics">
-        <article><span>ATS score</span><strong>87</strong><small>+12 after tailoring</small></article>
-        <article><span>Fresh matches</span><strong>24</strong><small>8 above threshold</small></article>
-        <article><span>Applications</span><strong>38</strong><small>6 interviews</small></article>
-        <article><span>Agent status</span><strong>Paused</strong><small>Approval mode on</small></article>
-      </section>
-
-      <section class="panel resume-panel">
-        <div class="panel-head">
-          <h2>Resume analyzer</h2>
-          <button id="save-resume">Save score</button>
-        </div>
-        <div class="resume-grid">
-          <label>
-            <span>Resume text</span>
-            <textarea id="resume-text" rows="9" placeholder="Paste your resume text"></textarea>
-          </label>
-          <label>
-            <span>Job description</span>
-            <textarea id="job-description" rows="9" placeholder="Paste a target job description"></textarea>
-          </label>
-          <div class="resume-result">
-            <div class="score large" id="resume-score">--</div>
-            <p id="resume-summary">No analysis yet.</p>
-            <ul id="resume-suggestions"></ul>
-            <button class="primary" id="analyze-resume">Analyze resume</button>
+      <section class="view active" id="view-dashboard">
+        <section class="metrics">
+          <article><span>ATS score</span><strong id="metric-ats">--</strong><small>latest analysis</small></article>
+          <article><span>Live matches</span><strong id="metric-jobs">--</strong><small>from public job feeds</small></article>
+          <article><span>Applications</span><strong id="metric-apps">--</strong><small>pipeline records</small></article>
+          <article><span>AI mode</span><strong id="metric-ai">--</strong><small>agent status</small></article>
+        </section>
+        <section class="layout">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Recent jobs</h2>
+              <button data-view-jump="jobs">Open Jobs</button>
+            </div>
+            <div id="dashboard-jobs" class="job-list"></div>
           </div>
-        </div>
-      </section>
-
-      <section class="panel kit-panel">
-        <div class="panel-head">
-          <h2>Application kit</h2>
-          <div class="button-row">
-            <button id="generate-cover">Cover letter</button>
-            <button id="generate-interview">Interview prep</button>
-            <button id="generate-outreach">Outreach</button>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Pipeline snapshot</h2>
+              <button data-view-jump="pipeline">Open Pipeline</button>
+            </div>
+            <div id="dashboard-pipeline" class="mini-list"></div>
           </div>
-        </div>
-        <div class="kit-grid">
-          <label>
-            <span>Company</span>
-            <input id="kit-company" placeholder="Company name" />
-          </label>
-          <label>
-            <span>Role</span>
-            <input id="kit-role" placeholder="Target role" />
-          </label>
-          <label>
-            <span>Tone</span>
-            <select id="kit-tone">
-              <option value="professional">Professional</option>
-              <option value="friendly">Friendly</option>
-              <option value="confident">Confident</option>
-              <option value="executive">Executive</option>
-            </select>
-          </label>
-        </div>
-        <pre id="kit-output">Generate a cover letter, interview prep pack, or outreach sequence.</pre>
+        </section>
       </section>
 
-      <section class="layout">
-        <div class="panel">
+      <section class="view" id="view-resume">
+        <section class="panel resume-panel">
           <div class="panel-head">
-            <h2>Recommended jobs</h2>
-            <button>Filter</button>
+            <h2>Resume analyzer and tailor</h2>
+            <div class="button-row">
+              <button id="save-resume">Save score</button>
+              <button class="primary" id="tailor-resume">Tailor resume</button>
+            </div>
+          </div>
+          <div class="upload-row">
+            <input id="resume-pdf" type="file" accept="application/pdf" />
+            <button id="upload-resume">Upload PDF</button>
+          </div>
+          <div class="resume-grid">
+            <label>
+              <span>Resume text</span>
+              <textarea id="resume-text" rows="10" placeholder="Paste resume text or upload a PDF"></textarea>
+            </label>
+            <label>
+              <span>Job description</span>
+              <textarea id="job-description" rows="10" placeholder="Paste the target job description"></textarea>
+            </label>
+            <div class="resume-result">
+              <div class="score large" id="resume-score">--</div>
+              <p id="resume-summary">No analysis yet.</p>
+              <ul id="resume-suggestions"></ul>
+              <button class="primary" id="analyze-resume">Analyze resume</button>
+            </div>
+          </div>
+          <pre id="tailored-output">Tailored resume output will appear here.</pre>
+        </section>
+      </section>
+
+      <section class="view" id="view-jobs">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Realtime job discovery</h2>
+            <div class="button-row">
+              <button id="load-live-jobs">Preview live</button>
+              <button class="primary" id="refresh-jobs">Fetch and save</button>
+            </div>
+          </div>
+          <div class="kit-grid">
+            <label>
+              <span>Search query</span>
+              <input id="job-query" value="software engineer" />
+            </label>
+            <label>
+              <span>Location</span>
+              <input id="job-location" value="remote" />
+            </label>
+            <label>
+              <span>Limit</span>
+              <input id="job-limit" type="number" min="1" max="100" value="25" />
+            </label>
           </div>
           <div id="jobs" class="job-list"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Pipeline</h2>
-            <button>Export CSV</button>
-          </div>
-          <div class="kanban">
-            <div><h3>Saved</h3><p>CloudPath - Backend Engineer</p></div>
-            <div><h3>Applied</h3><p>Northstar AI - ML Engineer</p></div>
-            <div><h3>Interview</h3><p>TalentOS - Full Stack Developer</p></div>
-          </div>
-        </div>
+        </section>
       </section>
 
-      <section class="panel agent">
-        <div>
-          <h2>Controlled auto-apply</h2>
-          <p>Real AI agents prepare materials, score fit, and produce an approval-mode action plan before any submission.</p>
-        </div>
-        <button class="primary" id="run-agents">Run AI agents</button>
+      <section class="view" id="view-pipeline">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Application pipeline</h2>
+            <button id="export-pipeline">Export CSV</button>
+          </div>
+          <div class="kanban" id="pipeline-board"></div>
+        </section>
       </section>
-      <section class="panel agent-output">
-        <div class="panel-head">
-          <h2>Agent run output</h2>
-          <button id="check-agent-status">Check AI status</button>
-        </div>
-        <pre id="agent-output">Run the AI agents to generate a full application plan.</pre>
+
+      <section class="view" id="view-agents">
+        <section class="panel kit-panel">
+          <div class="panel-head">
+            <h2>Application kit</h2>
+            <div class="button-row">
+              <button id="generate-cover">Cover letter</button>
+              <button id="generate-interview">Interview prep</button>
+              <button id="generate-outreach">Outreach</button>
+            </div>
+          </div>
+          <div class="kit-grid">
+            <label>
+              <span>Company</span>
+              <input id="kit-company" placeholder="Company name" />
+            </label>
+            <label>
+              <span>Role</span>
+              <input id="kit-role" placeholder="Target role" />
+            </label>
+            <label>
+              <span>Tone</span>
+              <select id="kit-tone">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="confident">Confident</option>
+                <option value="executive">Executive</option>
+              </select>
+            </label>
+          </div>
+          <pre id="kit-output">Generate a cover letter, interview prep pack, or outreach sequence.</pre>
+        </section>
+
+        <section class="panel agent">
+          <div>
+            <h2>AI agents</h2>
+            <p>Run resume, job-match, application-kit, and approval-mode auto-apply planning together.</p>
+          </div>
+          <div class="button-row">
+            <button id="check-agent-status">Check AI status</button>
+            <button class="primary" id="run-agents">Run AI agents</button>
+          </div>
+        </section>
+        <section class="panel agent-output">
+          <pre id="agent-output">Run the AI agents to generate a full application plan.</pre>
+        </section>
       </section>
     </main>
     <script src="./app.js"></script>
