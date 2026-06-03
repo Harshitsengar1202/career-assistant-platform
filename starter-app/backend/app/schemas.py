@@ -93,6 +93,15 @@ class OutreachResponse(BaseModel):
     follow_up: str
 
 
+class AgentFullRunRequest(BaseModel):
+    company: str = Field(min_length=2)
+    role: str = Field(min_length=2)
+    resume_text: str = Field(min_length=50)
+    job_description: str = Field(min_length=30)
+    tone: Literal["professional", "friendly", "confident", "executive"] = "professional"
+    min_match_score: int = Field(default=75, ge=0, le=100)
+
+
 class AutoApplyRequest(BaseModel):
     daily_limit: int = Field(default=10, ge=1, le=100)
     approval_mode: bool = True

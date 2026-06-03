@@ -39,6 +39,11 @@ uvicorn app.main:app --reload --port 8000
 - `POST /ai/cover-letter`: generate a tailored cover letter.
 - `POST /ai/interview-prep`: generate interview questions and answer tips.
 - `POST /ai/outreach`: generate LinkedIn, cold email, and follow-up messages.
+- `GET /agents/status`: verify whether OpenAI agents are enabled.
+- `POST /agents/resume`: run the resume agent only.
+- `POST /agents/job-match`: run the job match agent only.
+- `POST /agents/application-kit`: run the application kit agent only.
+- `POST /agents/full-run`: run resume, job match, kit generation, and approval-mode auto-apply planning together.
 - `GET /applications`: list the demo user's application pipeline.
 - `POST /applications`: save a job into the pipeline.
 - `PATCH /applications/{application_id}/status`: move an application between pipeline stages.
@@ -54,6 +59,8 @@ Railway variables to keep configured:
 ```text
 DATABASE_URL=postgresql://...
 FRONTEND_ORIGINS=https://career-assistant-platform-kappa.vercel.app
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5-mini
 ```
 
 Example job creation:
@@ -79,3 +86,13 @@ curl -X POST "$API_BASE/ai/cover-letter" \
   -H "Content-Type: application/json" \
   -d '{"company":"Acme AI","role":"Backend Engineer","resume_summary":"Built Python APIs with PostgreSQL, Docker, testing, analytics dashboards, and cloud automation. Reduced manual reporting by 40%.","job_description":"We need a backend engineer with Python, FastAPI, PostgreSQL, Docker, API design, testing, analytics, and cloud experience.","tone":"professional"}'
 ```
+
+Example full agent run:
+
+```bash
+curl -X POST "$API_BASE/agents/full-run" \
+  -H "Content-Type: application/json" \
+  -d '{"company":"Acme AI","role":"Backend Engineer","resume_text":"Experience: Built Python APIs with PostgreSQL, Docker, testing, analytics dashboards, and cloud automation. Reduced manual reporting by 40%. Skills: Python, SQL, FastAPI, React, leadership, collaboration.","job_description":"We need a backend engineer with Python, FastAPI, PostgreSQL, Docker, API design, testing, analytics, and cloud experience.","tone":"professional","min_match_score":75}'
+```
+
+If `OPENAI_API_KEY` is missing, the backend stays online and uses deterministic fallback agents. Use `GET /agents/status` to confirm whether real OpenAI agents are active.

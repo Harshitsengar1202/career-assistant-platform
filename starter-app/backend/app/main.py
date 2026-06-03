@@ -10,11 +10,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+from .ai_service import (
+    OPENAI_MODEL,
+    application_kit_agent,
+    full_agent_run,
+    job_match_agent,
+    openai_ready,
+    resume_agent,
+)
 from .db import check_database, execute_one, fetch_all, fetch_one
 from .schemas import (
     Application,
     ApplicationCreate,
     ApplicationStatusUpdate,
+    AgentFullRunRequest,
     ApplicationKitRequest,
     AutoApplyRequest,
     CoverLetterResponse,
@@ -81,6 +90,15 @@ DEFAULT_ATS_KEYWORDS = [
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/agents/status")
+def agent_status():
+    return {
+        "openai_enabled": openai_ready(),
+        "model": OPENAI_MODEL,
+        "mode": "openai" if openai_ready() else "deterministic_fallback",
+    }
 
 
 def format_salary(salary_min, salary_max):
@@ -234,6 +252,51 @@ def generate_outreach(request: ApplicationKitRequest):
         "I remain very interested and would be glad to share more context on my fit if useful."
     )
     return OutreachResponse(linkedin_note=linkedin_note, cold_email=cold_email, follow_up=follow_up)
+
+
+@app.post("/agents/resume")
+def run_resume_agent(request: ResumeAnalyzeRequest):
+    analysis = analyze_resume_text(request.resume_text, request.job_description)
+    return resume_agent(request.resume_text, request.job_description, analysis)
+
+
+@app.post("/agents/job-match")
+def run_job_match_agent(request: AgentFullRunRequest):
+    analysis = analyze_resume_text(request.resume_text, request.job_description)
+    return job_match_agent(request.company, request.role, request.resume_text, request.job_description, analysis)
+
+
+@app.post("/agents/application-kit")
+def run_application_kit_agent(request: AgentFullRunRequest):
+    analysis = analyze_resume_text(request.resume_text, request.job_description)
+    resume = resume_agent(request.resume_text, request.job_description, analysis)
+    return application_kit_agent(
+        request.company,
+        request.role,
+        resume.tailored_summary,
+        request.job_description,
+        request.tone,
+        resume.matched_keywords,
+    )
+
+
+@app.post("/agents/full-run")
+def run_full_agent_system(request: AgentFullRunRequest):
+    analysis = analyze_resume_text(request.resume_text, request.job_description)
+    result = full_agent_run(
+        request.company,
+        request.role,
+        request.resume_text,
+        request.job_description,
+        request.tone,
+        analysis,
+    )
+    decision = "ready_for_review" if result.job_match.match_score >= request.min_match_score else "needs_tailoring"
+    return {
+        **result.model_dump(),
+        "decision": decision,
+        "threshold": request.min_match_score,
+    }
 
 
 def ensure_demo_user_id() -> str:

@@ -168,4 +168,66 @@ document.querySelector("#generate-outreach").addEventListener("click", () => {
   });
 });
 
+async function runAgents() {
+  const payload = kitPayload();
+  if (!payload) return;
+
+  const response = await fetch(`${API_BASE}/agents/full-run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      company: payload.company,
+      role: payload.role,
+      resume_text: payload.resume_summary,
+      job_description: payload.job_description,
+      tone: payload.tone,
+      min_match_score: 75
+    })
+  });
+
+  if (!response.ok) {
+    alert("Agent run failed. Check Railway logs.");
+    return;
+  }
+
+  const result = await response.json();
+  document.querySelector("#agent-output").textContent = [
+    `Provider: ${result.provider}`,
+    `Decision: ${result.decision}`,
+    `Match score: ${result.job_match.match_score}/${result.threshold}`,
+    "",
+    "Fit Summary",
+    result.job_match.fit_summary,
+    "",
+    "Optimized Resume Bullets",
+    ...result.resume.optimized_bullets.map((item) => `- ${item}`),
+    "",
+    "Cover Letter",
+    result.application_kit.cover_letter,
+    "",
+    "Interview Questions",
+    ...result.application_kit.interview_questions.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "Auto-Apply Plan",
+    ...result.auto_apply_plan.map((item) => `- ${item}`),
+    "",
+    "Safety Checks",
+    ...result.safety_checks.map((item) => `- ${item}`)
+  ].join("\n");
+}
+
+async function checkAgentStatus() {
+  const response = await fetch(`${API_BASE}/agents/status`);
+  if (!response.ok) {
+    alert("Could not check agent status.");
+    return;
+  }
+  const status = await response.json();
+  document.querySelector("#agent-output").textContent =
+    `AI mode: ${status.mode}\nOpenAI enabled: ${status.openai_enabled}\nModel: ${status.model}`;
+}
+
+document.querySelector("#run-agents").addEventListener("click", runAgents);
+document.querySelector("#check-agent-status").addEventListener("click", checkAgentStatus);
+
 loadJobs().then(renderJobs);

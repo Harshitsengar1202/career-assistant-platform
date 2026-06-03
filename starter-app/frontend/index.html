@@ -111,9 +111,16 @@
       <section class="panel agent">
         <div>
           <h2>Controlled auto-apply</h2>
-          <p>Daily limit 10, minimum match 75, duplicate protection enabled, approval required before submission.</p>
+          <p>Real AI agents prepare materials, score fit, and produce an approval-mode action plan before any submission.</p>
         </div>
-        <button class="primary">Queue approval run</button>
+        <button class="primary" id="run-agents">Run AI agents</button>
+      </section>
+      <section class="panel agent-output">
+        <div class="panel-head">
+          <h2>Agent run output</h2>
+          <button id="check-agent-status">Check AI status</button>
+        </div>
+        <pre id="agent-output">Run the AI agents to generate a full application plan.</pre>
       </section>
     </main>
     <script src="./app.js"></script>
