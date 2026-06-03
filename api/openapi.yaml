@@ -1,0 +1,145 @@
+openapi: 3.1.0
+info:
+  title: AI Career Assistant Platform API
+  version: 2.1.0
+servers:
+  - url: https://api.example.com/v1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+        code: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string }
+    Job:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        company: { type: string }
+        title: { type: string }
+        location: { type: string }
+        matchScore: { type: number }
+        sourceUrl: { type: string, format: uri }
+    Application:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [saved, applied, screening, interview, offer, rejected]
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                fullName: { type: string }
+      responses:
+        "201":
+          description: User created
+  /auth/login:
+    post:
+      summary: Login and issue JWT
+      security: []
+      responses:
+        "200":
+          description: Authenticated session
+  /profiles/me:
+    get:
+      summary: Get current user's profile
+      responses:
+        "200": { description: Profile returned }
+    put:
+      summary: Update current user's profile
+      responses:
+        "200": { description: Profile updated }
+  /resumes:
+    post:
+      summary: Upload a resume
+      responses:
+        "201": { description: Resume uploaded }
+    get:
+      summary: List resumes
+      responses:
+        "200": { description: Resume list }
+  /resumes/{resumeId}/ats-score:
+    get:
+      summary: Get ATS score and recommendations
+      parameters:
+        - in: path
+          name: resumeId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: ATS score returned }
+  /resumes/{resumeId}/tailor:
+    post:
+      summary: Tailor resume to job description
+      parameters:
+        - in: path
+          name: resumeId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "202": { description: Tailoring job queued }
+  /jobs/recommended:
+    get:
+      summary: Get ranked job recommendations
+      responses:
+        "200": { description: Recommended jobs }
+  /applications:
+    get:
+      summary: List pipeline applications
+      responses:
+        "200": { description: Application list }
+    post:
+      summary: Create or save an application record
+      responses:
+        "201": { description: Application created }
+  /applications/{applicationId}/status:
+    patch:
+      summary: Update pipeline status
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Status updated }
+  /agents/auto-apply/run:
+    post:
+      summary: Start controlled auto-apply run
+      responses:
+        "202": { description: Agent run queued }
+  /exports/applications.csv:
+    get:
+      summary: Export applications as CSV
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema: { type: string }

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Career Assistant</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">CareerOS</div>
+      <nav>
+        <button class="active">Dashboard</button>
+        <button>Resume</button>
+        <button>Jobs</button>
+        <button>Pipeline</button>
+        <button>Agents</button>
+      </nav>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div>
+          <h1>Autonomous career assistant</h1>
+          <p>Ranked jobs, resume intelligence, and controlled application automation.</p>
+        </div>
+        <button class="primary">Run scan</button>
+      </header>
+
+      <section class="metrics">
+        <article><span>ATS score</span><strong>87</strong><small>+12 after tailoring</small></article>
+        <article><span>Fresh matches</span><strong>24</strong><small>8 above threshold</small></article>
+        <article><span>Applications</span><strong>38</strong><small>6 interviews</small></article>
+        <article><span>Agent status</span><strong>Paused</strong><small>Approval mode on</small></article>
+      </section>
+
+      <section class="layout">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Recommended jobs</h2>
+            <button>Filter</button>
+          </div>
+          <div id="jobs" class="job-list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Pipeline</h2>
+            <button>Export CSV</button>
+          </div>
+          <div class="kanban">
+            <div><h3>Saved</h3><p>CloudPath - Backend Engineer</p></div>
+            <div><h3>Applied</h3><p>Northstar AI - ML Engineer</p></div>
+            <div><h3>Interview</h3><p>TalentOS - Full Stack Developer</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel agent">
+        <div>
+          <h2>Controlled auto-apply</h2>
+          <p>Daily limit 10, minimum match 75, duplicate protection enabled, approval required before submission.</p>
+        </div>
+        <button class="primary">Queue approval run</button>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

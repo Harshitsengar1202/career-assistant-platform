@@ -1,0 +1,23 @@
+{
+  "package": "career-assistant-platform-package",
+  "files": [
+    "Enterprise_SRS_v2.1.docx",
+    "Enterprise_SRS_v2.1.pdf",
+    "README.md",
+    "api/openapi.yaml",
+    "architecture.md",
+    "database/schema.sql",
+    "project_plan.xlsx",
+    "starter-app/README.md",
+    "starter-app/backend/Dockerfile",
+    "starter-app/backend/app/__init__.py",
+    "starter-app/backend/app/main.py",
+    "starter-app/backend/app/schemas.py",
+    "starter-app/backend/requirements.txt",
+    "starter-app/docker-compose.yml",
+    "starter-app/frontend/app.js",
+    "starter-app/frontend/index.html",
+    "starter-app/frontend/styles.css",
+    "user_stories.md"
+  ]
+}
