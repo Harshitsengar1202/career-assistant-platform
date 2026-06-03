@@ -92,16 +92,21 @@ p { color: var(--muted); }
   padding: 14px 0;
 }
 .job:first-child { border-top: 0; padding-top: 0; }
-.score {
-  display: grid;
-  place-items: center;
-  width: 54px;
+        .score {
+          display: grid;
+          place-items: center;
+          width: 54px;
   height: 54px;
   border-radius: 8px;
   background: #edf6f0;
-  color: var(--green);
-  font-weight: 800;
-}
+          color: var(--green);
+          font-weight: 800;
+        }
+        .job-actions {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+        }
 .kanban {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

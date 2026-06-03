@@ -26,3 +26,22 @@ uvicorn app.main:app --reload --port 8000
 3. Connect resume upload to object storage and parsing workers.
 4. Add AI provider adapters and queue-backed agent runs.
 5. Add Playwright worker service for controlled apply workflows.
+
+## Current Feature Endpoints
+
+- `GET /health`: app health check.
+- `GET /db/health`: Supabase/Postgres connection check.
+- `GET /jobs/recommended`: list jobs from Postgres, with sample fallback.
+- `POST /jobs`: create or update a job record.
+- `GET /applications`: list the demo user's application pipeline.
+- `POST /applications`: save a job into the pipeline.
+- `PATCH /applications/{application_id}/status`: move an application between pipeline stages.
+- `GET /exports/applications.csv`: download application pipeline data as CSV.
+
+Example job creation:
+
+```bash
+curl -X POST "$API_BASE/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{"company":"Acme AI","title":"Backend Engineer","location":"Remote","salary_min":90000,"salary_max":130000,"source":"Manual","source_url":"https://example.com/acme-backend"}'
+```

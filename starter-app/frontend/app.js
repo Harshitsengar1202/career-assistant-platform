@@ -1,20 +1,65 @@
-const jobs = [
-  { company: "Northstar AI", title: "Machine Learning Engineer", location: "Remote", score: 92, source: "LinkedIn" },
-  { company: "CloudPath", title: "Backend Engineer", location: "Bengaluru", score: 86, source: "Company Portal" },
-  { company: "TalentOS", title: "Full Stack Developer", location: "Hybrid", score: 81, source: "Indeed" }
-];
-
 const API_BASE = "https://career-assistant-platform-production.up.railway.app";
 
-const response = await fetch(`${API_BASE}/jobs/recommended`);
-const jobs = await response.json();
-const root = document.querySelector("#jobs");
-root.innerHTML = jobs.map(job => `
-  <article class="job">
-    <div>
-      <h2>${job.title}</h2>
-      <p>${job.company} · ${job.location} · ${job.source}</p>
-    </div>
-    <div class="score">${job.score}</div>
-  </article>
-`).join("");
+const fallbackJobs = [
+  { company: "Northstar AI", title: "Machine Learning Engineer", location: "Remote", match_score: 92, source: "LinkedIn" },
+  { company: "CloudPath", title: "Backend Engineer", location: "Bengaluru", match_score: 86, source: "Company Portal" },
+  { company: "TalentOS", title: "Full Stack Developer", location: "Hybrid", match_score: 81, source: "Indeed" }
+];
+
+async function loadJobs() {
+  try {
+    const response = await fetch(`${API_BASE}/jobs/recommended`);
+    if (!response.ok) throw new Error(`API returned ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn("Using local sample jobs:", error);
+    return fallbackJobs;
+  }
+}
+
+async function saveApplication(job) {
+  if (!job.id || job.id.startsWith("job_")) {
+    alert("This sample job is not in your database yet. Add real jobs through the API first.");
+    return;
+  }
+
+  const response = await fetch(`${API_BASE}/applications`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      job_id: job.id,
+      status: "saved",
+      match_score: job.match_score,
+      notes: "Saved from dashboard"
+    })
+  });
+
+  if (!response.ok) {
+    alert("Could not save application. Check the backend logs.");
+    return;
+  }
+
+  alert("Saved to pipeline.");
+}
+
+function renderJobs(jobs) {
+  const root = document.querySelector("#jobs");
+  root.innerHTML = jobs.map((job, index) => `
+    <article class="job">
+      <div>
+        <h2>${job.title}</h2>
+        <p>${job.company} - ${job.location} - ${job.source}${job.salary ? ` - ${job.salary}` : ""}</p>
+      </div>
+      <div class="job-actions">
+        <div class="score">${job.match_score}</div>
+        <button data-job-index="${index}">Save</button>
+      </div>
+    </article>
+  `).join("");
+
+  root.querySelectorAll("[data-job-index]").forEach((button) => {
+    button.addEventListener("click", () => saveApplication(jobs[Number(button.dataset.jobIndex)]));
+  });
+}
+
+loadJobs().then(renderJobs);
