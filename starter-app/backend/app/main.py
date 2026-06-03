@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from .schemas import Application, AutoApplyRequest, Job
+from .db import check_database
 
 app = FastAPI(title="AI Career Assistant API", version="0.1.0")
 
@@ -39,4 +40,11 @@ def run_auto_apply(request: AutoApplyRequest):
         "daily_limit": request.daily_limit,
         "eligible_jobs": len(eligible),
         "message": "Controlled auto-apply run queued. Human approval is enabled by default.",
+    }
+
+@app.get("/db/health")
+def db_health():
+    return {
+        "status": "connected",
+        "database_time": str(check_database()),
     }
