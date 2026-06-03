@@ -62,4 +62,45 @@ function renderJobs(jobs) {
   });
 }
 
+async function analyzeResume(save = false) {
+  const resumeText = document.querySelector("#resume-text").value.trim();
+  const jobDescription = document.querySelector("#job-description").value.trim();
+
+  if (resumeText.length < 50) {
+    alert("Paste at least 50 characters of resume text.");
+    return;
+  }
+
+  const endpoint = save ? "/resumes" : "/resumes/analyze";
+  const body = save
+    ? { title: "Dashboard Resume", resume_text: resumeText, job_description: jobDescription }
+    : { resume_text: resumeText, job_description: jobDescription };
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    alert("Resume analysis failed. Check the backend logs.");
+    return;
+  }
+
+  const result = await response.json();
+  if (save) {
+    alert(`Saved resume score: ${result.ats_score ?? "ready"}`);
+    return;
+  }
+
+  document.querySelector("#resume-score").textContent = result.ats_score;
+  document.querySelector("#resume-summary").textContent =
+    `${result.word_count} words. Matched ${result.matched_keywords.length} keywords, missing ${result.missing_keywords.length}.`;
+  document.querySelector("#resume-suggestions").innerHTML =
+    result.suggestions.map((suggestion) => `<li>${suggestion}</li>`).join("");
+}
+
+document.querySelector("#analyze-resume").addEventListener("click", () => analyzeResume(false));
+document.querySelector("#save-resume").addEventListener("click", () => analyzeResume(true));
+
 loadJobs().then(renderJobs);

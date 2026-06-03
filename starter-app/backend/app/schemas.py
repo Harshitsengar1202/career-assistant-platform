@@ -44,6 +44,32 @@ class ApplicationStatusUpdate(BaseModel):
     notes: str | None = None
 
 
+class ResumeAnalyzeRequest(BaseModel):
+    resume_text: str = Field(min_length=50)
+    job_description: str = ""
+
+
+class ResumeAnalyzeResponse(BaseModel):
+    ats_score: int = Field(ge=0, le=100)
+    matched_keywords: list[str]
+    missing_keywords: list[str]
+    suggestions: list[str]
+    word_count: int
+
+
+class ResumeCreate(BaseModel):
+    title: str = "Primary Resume"
+    resume_text: str = Field(min_length=50)
+    job_description: str = ""
+
+
+class ResumeRecord(BaseModel):
+    id: str
+    title: str
+    ats_score: int | None = None
+    created_at: str
+
+
 class AutoApplyRequest(BaseModel):
     daily_limit: int = Field(default=10, ge=1, le=100)
     approval_mode: bool = True

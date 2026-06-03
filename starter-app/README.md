@@ -33,6 +33,9 @@ uvicorn app.main:app --reload --port 8000
 - `GET /db/health`: Supabase/Postgres connection check.
 - `GET /jobs/recommended`: list jobs from Postgres, with sample fallback.
 - `POST /jobs`: create or update a job record.
+- `POST /resumes/analyze`: score pasted resume text against a job description.
+- `POST /resumes`: save a resume score into Supabase.
+- `GET /resumes`: list saved resume scores.
 - `GET /applications`: list the demo user's application pipeline.
 - `POST /applications`: save a job into the pipeline.
 - `PATCH /applications/{application_id}/status`: move an application between pipeline stages.
@@ -56,4 +59,12 @@ Example job creation:
 curl -X POST "$API_BASE/jobs" \
   -H "Content-Type: application/json" \
   -d '{"company":"Acme AI","title":"Backend Engineer","location":"Remote","salary_min":90000,"salary_max":130000,"source":"Manual","source_url":"https://example.com/acme-backend"}'
+```
+
+Example resume analysis:
+
+```bash
+curl -X POST "$API_BASE/resumes/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{"resume_text":"Experience: Built Python APIs with PostgreSQL, Docker, testing, and analytics dashboards. Skills: Python, SQL, FastAPI, React, cloud automation, collaboration, leadership. Projects: Reduced manual reporting by 40%. Education: Computer Science.","job_description":"We need a backend engineer with Python, FastAPI, PostgreSQL, Docker, API design, testing, analytics, and cloud experience."}'
 ```

@@ -33,6 +33,29 @@
         <article><span>Agent status</span><strong>Paused</strong><small>Approval mode on</small></article>
       </section>
 
+      <section class="panel resume-panel">
+        <div class="panel-head">
+          <h2>Resume analyzer</h2>
+          <button id="save-resume">Save score</button>
+        </div>
+        <div class="resume-grid">
+          <label>
+            <span>Resume text</span>
+            <textarea id="resume-text" rows="9" placeholder="Paste your resume text"></textarea>
+          </label>
+          <label>
+            <span>Job description</span>
+            <textarea id="job-description" rows="9" placeholder="Paste a target job description"></textarea>
+          </label>
+          <div class="resume-result">
+            <div class="score large" id="resume-score">--</div>
+            <p id="resume-summary">No analysis yet.</p>
+            <ul id="resume-suggestions"></ul>
+            <button class="primary" id="analyze-resume">Analyze resume</button>
+          </div>
+        </div>
+      </section>
+
       <section class="layout">
         <div class="panel">
           <div class="panel-head">

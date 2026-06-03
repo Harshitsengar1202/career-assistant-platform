@@ -1,7 +1,10 @@
 import csv
 import hashlib
 import io
+import json
 import os
+import re
+from collections import Counter
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +18,10 @@ from .schemas import (
     AutoApplyRequest,
     Job,
     JobCreate,
+    ResumeAnalyzeRequest,
+    ResumeAnalyzeResponse,
+    ResumeCreate,
+    ResumeRecord,
 )
 
 app = FastAPI(title="AI Career Assistant API", version="0.1.0")
@@ -48,6 +55,24 @@ SAMPLE_APPLICATIONS = [
     Application(id="app_2", company="CloudPath", title="Backend Engineer", status="interview", match_score=86, notes="Technical screen scheduled."),
 ]
 
+DEFAULT_ATS_KEYWORDS = [
+    "python",
+    "sql",
+    "api",
+    "fastapi",
+    "react",
+    "javascript",
+    "postgresql",
+    "docker",
+    "cloud",
+    "aws",
+    "testing",
+    "automation",
+    "analytics",
+    "leadership",
+    "collaboration",
+]
+
 
 @app.get("/health")
 def health():
@@ -67,6 +92,63 @@ def normalized_hash(company: str, title: str, location: str, source_url: str) ->
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def tokenize(text: str) -> list[str]:
+    return re.findall(r"[a-zA-Z][a-zA-Z0-9+#.-]{1,}", text.lower())
+
+
+def important_keywords(job_description: str) -> list[str]:
+    if not job_description.strip():
+        return DEFAULT_ATS_KEYWORDS
+
+    stop_words = {
+        "and", "the", "with", "for", "you", "our", "are", "will", "this", "that",
+        "from", "have", "has", "your", "about", "into", "work", "team", "role",
+        "experience", "years", "using", "such", "including", "across", "within",
+    }
+    counts = Counter(token for token in tokenize(job_description) if token not in stop_words and len(token) > 2)
+    common = [word for word, _ in counts.most_common(18)]
+    return common or DEFAULT_ATS_KEYWORDS
+
+
+def analyze_resume_text(resume_text: str, job_description: str = "") -> ResumeAnalyzeResponse:
+    resume_tokens = set(tokenize(resume_text))
+    keywords = important_keywords(job_description)
+    matched = [keyword for keyword in keywords if keyword.lower() in resume_tokens]
+    missing = [keyword for keyword in keywords if keyword.lower() not in resume_tokens]
+    word_count = len(tokenize(resume_text))
+
+    keyword_score = round((len(matched) / max(len(keywords), 1)) * 65)
+    length_score = 15 if word_count >= 350 else 10 if word_count >= 220 else 5
+    structure_score = 0
+    lowered = resume_text.lower()
+    for section in ["experience", "skills", "projects", "education"]:
+        if section in lowered:
+            structure_score += 5
+    ats_score = min(keyword_score + length_score + structure_score, 100)
+
+    suggestions = []
+    if missing:
+        suggestions.append(f"Add evidence for these keywords where truthful: {', '.join(missing[:8])}.")
+    if "projects" not in lowered:
+        suggestions.append("Add a Projects section with measurable outcomes and tools used.")
+    if "skills" not in lowered:
+        suggestions.append("Add a Skills section grouped by language, framework, database, cloud, and tools.")
+    if not re.search(r"\d+%|\d+x|\$\d+|\d+\+", resume_text):
+        suggestions.append("Add quantified impact such as percentages, scale, revenue, latency, users, or automation time saved.")
+    if word_count < 220:
+        suggestions.append("Expand the resume with stronger experience bullets; most ATS-friendly resumes need more role evidence.")
+    if not suggestions:
+        suggestions.append("Resume is well structured. Tune the top summary and bullets for each target job before applying.")
+
+    return ResumeAnalyzeResponse(
+        ats_score=ats_score,
+        matched_keywords=matched,
+        missing_keywords=missing,
+        suggestions=suggestions,
+        word_count=word_count,
+    )
+
+
 def ensure_demo_user_id() -> str:
     row = execute_one(
         """
@@ -78,6 +160,49 @@ def ensure_demo_user_id() -> str:
         {"email": DEMO_EMAIL},
     )
     return row["id"]
+
+
+@app.post("/resumes/analyze", response_model=ResumeAnalyzeResponse)
+def analyze_resume(request: ResumeAnalyzeRequest):
+    return analyze_resume_text(request.resume_text, request.job_description)
+
+
+@app.post("/resumes", response_model=ResumeRecord)
+def create_resume(resume: ResumeCreate):
+    user_id = ensure_demo_user_id()
+    analysis = analyze_resume_text(resume.resume_text, resume.job_description)
+    row = execute_one(
+        """
+        INSERT INTO resumes (user_id, title, storage_url, parsed_text, parsed_json, ats_score, is_active)
+        VALUES (:user_id, :title, :storage_url, :parsed_text, CAST(:parsed_json AS jsonb), :ats_score, true)
+        RETURNING id::text AS id, title, ats_score::int AS ats_score, created_at::text AS created_at
+        """,
+        {
+            "user_id": user_id,
+            "title": resume.title,
+            "storage_url": f"inline://{hashlib.sha256(resume.resume_text.encode('utf-8')).hexdigest()}",
+            "parsed_text": resume.resume_text,
+            "parsed_json": json.dumps(analysis.model_dump()),
+            "ats_score": analysis.ats_score,
+        },
+    )
+    return ResumeRecord(**row)
+
+
+@app.get("/resumes", response_model=list[ResumeRecord])
+def list_resumes():
+    user_id = ensure_demo_user_id()
+    rows = fetch_all(
+        """
+        SELECT id::text AS id, title, ats_score::int AS ats_score, created_at::text AS created_at
+        FROM resumes
+        WHERE user_id = :user_id
+        ORDER BY created_at DESC
+        LIMIT 25
+        """,
+        {"user_id": user_id},
+    )
+    return [ResumeRecord(**row) for row in rows]
 
 
 @app.get("/jobs/recommended", response_model=list[Job])
